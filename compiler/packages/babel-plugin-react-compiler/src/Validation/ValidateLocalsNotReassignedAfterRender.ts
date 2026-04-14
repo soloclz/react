@@ -58,7 +58,6 @@ function getContextReassignment(
   env: Environment,
 ): Place | null {
   const reassigningFunctions = new Map<IdentifierId, Place>();
-  const propertyLoads = new Map<IdentifierId, string | number>();
   for (const [, block] of fn.body.blocks) {
     for (const instr of block.instructions) {
       const {lvalue, value} = instr;
@@ -163,7 +162,11 @@ function getContextReassignment(
           break;
         }
         case 'PropertyLoad': {
-          propertyLoads.set(lvalue.identifier.id, value.property);
+          /*
+           * Property loads should not inherit reassignment from their receiver.
+           * A value like `someItems.length` is not itself a reassigning function,
+           * even if `someItems` originated from a callback that mutates context.
+           */
           break;
         }
         default: {
@@ -182,16 +185,7 @@ function getContextReassignment(
               fn.env,
               value.property.identifier.type,
             );
-            const propertyName =
-              propertyLoads.get(value.property.identifier.id) ??
-              (value.property.identifier.name != null &&
-              value.property.identifier.name.kind === 'named'
-                ? value.property.identifier.name.value
-                : null);
-            if (
-              signature?.noAlias ||
-              propertyName === 'filter'
-            ) {
+            if (signature?.noAlias) {
               operands = [value.receiver, value.property];
             }
           } else if (value.kind === 'TaggedTemplateExpression') {
