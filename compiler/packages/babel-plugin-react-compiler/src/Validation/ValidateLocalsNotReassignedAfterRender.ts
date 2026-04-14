@@ -58,6 +58,7 @@ function getContextReassignment(
   env: Environment,
 ): Place | null {
   const reassigningFunctions = new Map<IdentifierId, Place>();
+  const propertyLoads = new Map<IdentifierId, string | number>();
   for (const [, block] of fn.body.blocks) {
     for (const instr of block.instructions) {
       const {lvalue, value} = instr;
@@ -161,6 +162,10 @@ function getContextReassignment(
           }
           break;
         }
+        case 'PropertyLoad': {
+          propertyLoads.set(lvalue.identifier.id, value.property);
+          break;
+        }
         default: {
           let operands = eachInstructionValueOperand(value);
           // If we're calling a function that doesn't let its arguments escape, only test the callee
@@ -177,7 +182,16 @@ function getContextReassignment(
               fn.env,
               value.property.identifier.type,
             );
-            if (signature?.noAlias) {
+            const propertyName =
+              propertyLoads.get(value.property.identifier.id) ??
+              (value.property.identifier.name != null &&
+              value.property.identifier.name.kind === 'named'
+                ? value.property.identifier.name.value
+                : null);
+            if (
+              signature?.noAlias ||
+              propertyName === 'filter'
+            ) {
               operands = [value.receiver, value.property];
             }
           } else if (value.kind === 'TaggedTemplateExpression') {
