@@ -356,19 +356,18 @@ describe('useSyncExternalStore', () => {
 
   it('re-checks the snapshot after re-subscribing following a StrictMode Suspense remount', async () => {
     let currentState = 0;
-    let listeners = [];
     let shouldMutateOnSubscribe = false;
 
     const store = {
       subscribe(listener) {
-        listeners = [...listeners, listener];
         if (shouldMutateOnSubscribe) {
           shouldMutateOnSubscribe = false;
           currentState = 1;
         }
-        return () => {
-          listeners = listeners.filter(l => l !== listener);
-        };
+        // We intentionally do not notify through the listener here; the point
+        // of this test is that subscribe-time silent mutations still need the
+        // post-subscribe snapshot repair path.
+        return () => {};
       },
       getState() {
         return currentState;

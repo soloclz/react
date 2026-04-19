@@ -1876,7 +1876,6 @@ function subscribeToStore<T>(
   // the last snapshot read during render. Check one more time now that the
   // subscription is active.
   if (checkIfSnapshotChanged(inst)) {
-    startUpdateTimerByLane(SyncLane, 'updateSyncExternalStore()', fiber);
     forceStoreRerender(fiber);
   }
 
